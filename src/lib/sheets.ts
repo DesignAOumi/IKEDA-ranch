@@ -1,7 +1,7 @@
-import { google } from 'googleapis'
+import { sheetsGet, sheetsUpdate, sheetsAppend, sheetsClear } from './google-auth'
 import type { InventoryItem, Company, Proposal, AlertHistory, AdminUser } from './types'
 
-const SHEET_NAMES = {
+const SHEET = {
   INVENTORY: '在庫',
   COMPANIES: '飼料会社アカウント',
   PROPOSALS: '新商材提案',
@@ -9,32 +9,15 @@ const SHEET_NAMES = {
   ADMIN: '管理者アカウント',
 } as const
 
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  })
-}
-
-function getSheets() {
-  return google.sheets({ version: 'v4', auth: getAuth() })
-}
-
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID!
+const ID = process.env.SPREADSHEET_ID!
 
 // ── 在庫 ──────────────────────────────────────────────
 
 export async function getInventory(): Promise<InventoryItem[]> {
-  const sheets = getSheets()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.INVENTORY}!A2:K`,
-  })
-  const rows = res.data.values ?? []
+  const rows = await sheetsGet(ID, `${SHEET.INVENTORY}!A2:K`)
   return rows.map((r) => ({
     id: r[0] ?? '',
-    category: r[1] ?? '',
+    category: (r[1] ?? '') as InventoryItem['category'],
     name: r[2] ?? '',
     stock: Number(r[3]) || 0,
     unit: r[4] ?? 'パレット',
@@ -52,7 +35,6 @@ export async function updateInventoryItem(
   data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>>,
   updatedBy: string
 ): Promise<void> {
-  const sheets = getSheets()
   const items = await getInventory()
   const idx = items.findIndex((i) => i.id === id)
   if (idx === -1) throw new Error('Item not found')
@@ -61,37 +43,25 @@ export async function updateInventoryItem(
   const item = items[idx]
   const now = new Date().toISOString()
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.INVENTORY}!A${row}:K${row}`,
-    valueInputOption: 'RAW',
-    requestBody: {
-      values: [[
-        item.id,
-        item.category,
-        item.name,
-        data.stock ?? item.stock,
-        item.unit,
-        data.pricePerKg ?? item.pricePerKg ?? '',
-        data.minLot ?? item.minLot,
-        data.minLotPrice ?? item.minLotPrice ?? '',
-        data.alertThreshold ?? item.alertThreshold,
-        now,
-        updatedBy,
-      ]],
-    },
-  })
+  await sheetsUpdate(ID, `${SHEET.INVENTORY}!A${row}:K${row}`, [[
+    item.id,
+    item.category,
+    item.name,
+    data.stock ?? item.stock,
+    item.unit,
+    data.pricePerKg !== undefined ? (data.pricePerKg ?? '') : (item.pricePerKg ?? ''),
+    data.minLot ?? item.minLot,
+    data.minLotPrice !== undefined ? (data.minLotPrice ?? '') : (item.minLotPrice ?? ''),
+    data.alertThreshold ?? item.alertThreshold,
+    now,
+    updatedBy,
+  ]])
 }
 
 // ── 飼料会社アカウント ──────────────────────────────────
 
 export async function getCompanies(): Promise<Company[]> {
-  const sheets = getSheets()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.COMPANIES}!A2:E`,
-  })
-  const rows = res.data.values ?? []
+  const rows = await sheetsGet(ID, `${SHEET.COMPANIES}!A2:E`)
   return rows.map((r) => ({
     id: r[0] ?? '',
     name: r[1] ?? '',
@@ -102,52 +72,29 @@ export async function getCompanies(): Promise<Company[]> {
 }
 
 export async function addCompany(company: Omit<Company, 'lastLogin'>): Promise<void> {
-  const sheets = getSheets()
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.COMPANIES}!A:E`,
-    valueInputOption: 'RAW',
-    requestBody: {
-      values: [[company.id, company.name, company.passwordHash, company.createdAt, '']],
-    },
-  })
+  await sheetsAppend(ID, `${SHEET.COMPANIES}!A:E`, [
+    [company.id, company.name, company.passwordHash, company.createdAt, '']
+  ])
 }
 
 export async function updateCompanyLastLogin(id: string): Promise<void> {
-  const sheets = getSheets()
   const companies = await getCompanies()
   const idx = companies.findIndex((c) => c.id === id)
   if (idx === -1) return
-  const row = idx + 2
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.COMPANIES}!E${row}`,
-    valueInputOption: 'RAW',
-    requestBody: { values: [[new Date().toISOString()]] },
-  })
+  await sheetsUpdate(ID, `${SHEET.COMPANIES}!E${idx + 2}`, [[new Date().toISOString()]])
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-  const sheets = getSheets()
   const companies = await getCompanies()
   const idx = companies.findIndex((c) => c.id === id)
   if (idx === -1) return
-  const row = idx + 2
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.COMPANIES}!A${row}:E${row}`,
-  })
+  await sheetsClear(ID, `${SHEET.COMPANIES}!A${idx + 2}:E${idx + 2}`)
 }
 
 // ── 新商材提案 ──────────────────────────────────────────
 
 export async function getProposals(): Promise<Proposal[]> {
-  const sheets = getSheets()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.PROPOSALS}!A2:J`,
-  })
-  const rows = res.data.values ?? []
+  const rows = await sheetsGet(ID, `${SHEET.PROPOSALS}!A2:J`)
   return rows.map((r) => ({
     id: r[0] ?? '',
     companyName: r[1] ?? '',
@@ -163,63 +110,37 @@ export async function getProposals(): Promise<Proposal[]> {
 }
 
 export async function addProposal(proposal: Omit<Proposal, 'status'>): Promise<void> {
-  const sheets = getSheets()
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.PROPOSALS}!A:J`,
-    valueInputOption: 'RAW',
-    requestBody: {
-      values: [[
-        proposal.id,
-        proposal.companyName,
-        proposal.productName,
-        proposal.category,
-        proposal.description,
-        proposal.pricePerKg ?? '',
-        proposal.minLot ?? '',
-        proposal.contact,
-        'pending',
-        proposal.createdAt,
-      ]],
-    },
-  })
+  await sheetsAppend(ID, `${SHEET.PROPOSALS}!A:J`, [[
+    proposal.id,
+    proposal.companyName,
+    proposal.productName,
+    proposal.category,
+    proposal.description,
+    proposal.pricePerKg ?? '',
+    proposal.minLot ?? '',
+    proposal.contact,
+    'pending',
+    proposal.createdAt,
+  ]])
 }
 
 export async function updateProposalStatus(id: string, status: Proposal['status']): Promise<void> {
-  const sheets = getSheets()
   const proposals = await getProposals()
   const idx = proposals.findIndex((p) => p.id === id)
   if (idx === -1) throw new Error('Proposal not found')
-  const row = idx + 2
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.PROPOSALS}!I${row}`,
-    valueInputOption: 'RAW',
-    requestBody: { values: [[status]] },
-  })
+  await sheetsUpdate(ID, `${SHEET.PROPOSALS}!I${idx + 2}`, [[status]])
 }
 
 // ── アラート履歴 ────────────────────────────────────────
 
 export async function addAlertHistory(entry: AlertHistory): Promise<void> {
-  const sheets = getSheets()
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.ALERT_HISTORY}!A:E`,
-    valueInputOption: 'RAW',
-    requestBody: {
-      values: [[entry.id, entry.productName, entry.stock, entry.threshold, entry.sentAt]],
-    },
-  })
+  await sheetsAppend(ID, `${SHEET.ALERT_HISTORY}!A:E`, [
+    [entry.id, entry.productName, entry.stock, entry.threshold, entry.sentAt]
+  ])
 }
 
 export async function getTodayAlertHistory(): Promise<AlertHistory[]> {
-  const sheets = getSheets()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.ALERT_HISTORY}!A2:E`,
-  })
-  const rows = res.data.values ?? []
+  const rows = await sheetsGet(ID, `${SHEET.ALERT_HISTORY}!A2:E`)
   const today = new Date().toISOString().slice(0, 10)
   return rows
     .map((r) => ({
@@ -235,12 +156,7 @@ export async function getTodayAlertHistory(): Promise<AlertHistory[]> {
 // ── 管理者アカウント ────────────────────────────────────
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
-  const sheets = getSheets()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAMES.ADMIN}!A2:C`,
-  })
-  const rows = res.data.values ?? []
+  const rows = await sheetsGet(ID, `${SHEET.ADMIN}!A2:C`)
   return rows.map((r) => ({
     id: r[0] ?? '',
     username: r[1] ?? '',
