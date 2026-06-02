@@ -1,17 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import type { AuthPayload } from '@/lib/types'
 
 export default function Navbar({ session }: { session: AuthPayload }) {
-  const router = useRouter()
   const pathname = usePathname()
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/login')
-    router.refresh()
+    window.location.href = '/login'
   }
 
   const isAdmin = session.role === 'admin'
