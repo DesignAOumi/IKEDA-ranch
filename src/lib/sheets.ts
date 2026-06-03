@@ -30,6 +30,33 @@ export async function getInventory(): Promise<InventoryItem[]> {
   }))
 }
 
+export async function addInventoryItem(
+  data: Pick<InventoryItem, 'category' | 'name' | 'stock' | 'unit' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>,
+  updatedBy: string
+): Promise<void> {
+  const items = await getInventory()
+  const maxNum = items.reduce((max, item) => {
+    const n = parseInt(item.id.replace('inv_', '')) || 0
+    return n > max ? n : max
+  }, 0)
+  const newId = `inv_${String(maxNum + 1).padStart(3, '0')}`
+  const now = new Date().toISOString()
+
+  await sheetsAppend(ID, `${SHEET.INVENTORY}!A:K`, [[
+    newId,
+    data.category,
+    data.name,
+    data.stock,
+    data.unit,
+    data.pricePerKg ?? '',
+    data.minLot,
+    data.minLotPrice ?? '',
+    data.alertThreshold,
+    now,
+    updatedBy,
+  ]])
+}
+
 export async function updateInventoryItem(
   id: string,
   data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>>,
