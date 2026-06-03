@@ -6,21 +6,20 @@ import type { AuthPayload } from '@/lib/types'
 
 export default function Navbar({ session }: { session: AuthPayload }) {
   const pathname = usePathname()
+  const isAdmin = session.role === 'admin'
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login'
   }
 
-  const isAdmin = session.role === 'admin'
-
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <header className="bg-gradient-to-r from-green-600 to-emerald-600 shadow-md sticky top-0 z-10">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-bold text-green-800">
-            <span className="text-xl">🐄</span>
-            <span className="hidden sm:inline">池田牧場</span>
+        <div className="flex items-center gap-5">
+          <Link href="/" className="flex items-center gap-2 font-bold text-white text-lg">
+            <span className="text-2xl">🐄</span>
+            <span className="hidden sm:inline tracking-wide">池田牧場</span>
           </Link>
 
           <nav className="flex items-center gap-1">
@@ -33,12 +32,12 @@ export default function Navbar({ session }: { session: AuthPayload }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 hidden sm:inline">
+          <span className="text-xs text-green-100 hidden sm:inline">
             {isAdmin ? '管理者' : session.name}
           </span>
           <button
             onClick={handleLogout}
-            className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md px-3 py-1.5 transition-colors"
+            className="text-xs text-white border border-green-400 hover:bg-green-700 rounded-lg px-3 py-1.5 transition-colors"
           >
             ログアウト
           </button>
@@ -52,10 +51,10 @@ function NavLink({ href, current, children }: { href: string; current: boolean; 
   return (
     <Link
       href={href}
-      className={`text-sm px-3 py-1.5 rounded-md transition-colors ${
+      className={`text-sm px-3 py-1.5 rounded-lg transition-colors font-medium ${
         current
-          ? 'bg-green-50 text-green-700 font-medium'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+          ? 'bg-white text-green-700'
+          : 'text-green-100 hover:bg-green-700'
       }`}
     >
       {children}
