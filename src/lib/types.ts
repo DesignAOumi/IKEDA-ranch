@@ -22,19 +22,6 @@ export interface Company {
   lastLogin: string
 }
 
-export interface Proposal {
-  id: string
-  companyName: string
-  productName: string
-  category: string
-  description: string
-  pricePerKg: number | null
-  minLot: number | null
-  contact: string
-  status: 'pending' | 'reviewed' | 'accepted' | 'rejected'
-  createdAt: string
-}
-
 export interface AlertHistory {
   id: string
   productName: string

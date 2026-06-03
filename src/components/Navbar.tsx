@@ -24,7 +24,6 @@ export default function Navbar({ session }: { session: AuthPayload }) {
 
           <nav className="flex items-center gap-1">
             <NavLink href="/" current={pathname === '/'}>在庫一覧</NavLink>
-            <NavLink href="/propose" current={pathname === '/propose'}>新商材を提案</NavLink>
             {isAdmin && (
               <NavLink href="/admin" current={pathname.startsWith('/admin')}>管理</NavLink>
             )}

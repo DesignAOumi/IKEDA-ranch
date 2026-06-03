@@ -1,10 +1,9 @@
 import { sheetsGet, sheetsUpdate, sheetsAppend, sheetsClear } from './google-auth'
-import type { InventoryItem, Company, Proposal, AlertHistory, AdminUser } from './types'
+import type { InventoryItem, Company, AlertHistory, AdminUser } from './types'
 
 const SHEET = {
   INVENTORY: '在庫',
   COMPANIES: '飼料会社アカウント',
-  PROPOSALS: '新商材提案',
   ALERT_HISTORY: 'アラート履歴',
   ADMIN: '管理者アカウント',
 } as const
@@ -116,46 +115,6 @@ export async function deleteCompany(id: string): Promise<void> {
   const idx = companies.findIndex((c) => c.id === id)
   if (idx === -1) return
   await sheetsClear(ID, `${SHEET.COMPANIES}!A${idx + 2}:E${idx + 2}`)
-}
-
-// ── 新商材提案 ──────────────────────────────────────────
-
-export async function getProposals(): Promise<Proposal[]> {
-  const rows = await sheetsGet(ID, `${SHEET.PROPOSALS}!A2:J`)
-  return rows.map((r) => ({
-    id: r[0] ?? '',
-    companyName: r[1] ?? '',
-    productName: r[2] ?? '',
-    category: r[3] ?? '',
-    description: r[4] ?? '',
-    pricePerKg: r[5] ? Number(r[5]) : null,
-    minLot: r[6] ? Number(r[6]) : null,
-    contact: r[7] ?? '',
-    status: (r[8] as Proposal['status']) ?? 'pending',
-    createdAt: r[9] ?? '',
-  }))
-}
-
-export async function addProposal(proposal: Omit<Proposal, 'status'>): Promise<void> {
-  await sheetsAppend(ID, `${SHEET.PROPOSALS}!A:J`, [[
-    proposal.id,
-    proposal.companyName,
-    proposal.productName,
-    proposal.category,
-    proposal.description,
-    proposal.pricePerKg ?? '',
-    proposal.minLot ?? '',
-    proposal.contact,
-    'pending',
-    proposal.createdAt,
-  ]])
-}
-
-export async function updateProposalStatus(id: string, status: Proposal['status']): Promise<void> {
-  const proposals = await getProposals()
-  const idx = proposals.findIndex((p) => p.id === id)
-  if (idx === -1) throw new Error('Proposal not found')
-  await sheetsUpdate(ID, `${SHEET.PROPOSALS}!I${idx + 2}`, [[status]])
 }
 
 // ── アラート履歴 ────────────────────────────────────────
