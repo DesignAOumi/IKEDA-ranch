@@ -25,7 +25,7 @@ export default function Navbar({ session }: { session: AuthPayload }) {
           <nav className="flex items-center gap-1">
             <NavLink href="/" current={pathname === '/'}>在庫一覧</NavLink>
             {isAdmin && (
-              <NavLink href="/admin" current={pathname.startsWith('/admin')}>管理</NavLink>
+              <NavLink href="/admin/inventory" current={pathname.startsWith('/admin')}>管理</NavLink>
             )}
           </nav>
         </div>
