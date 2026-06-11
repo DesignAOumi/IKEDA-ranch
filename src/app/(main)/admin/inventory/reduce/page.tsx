@@ -87,7 +87,7 @@ export default function ReduceInventoryPage() {
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left px-4 py-3 font-semibold text-gray-500">商品名</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-500">現在の在庫</th>
-                    <th className="text-right px-4 py-3 font-semibold text-gray-500 hidden sm:table-cell">単価</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-500">単価</th>
                     <th className="px-4 py-3 text-right font-semibold text-gray-500">削減</th>
                   </tr>
                 </thead>
@@ -106,7 +106,7 @@ export default function ReduceInventoryPage() {
                             {item.stock} {item.unit}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-500 hidden sm:table-cell">
+                        <td className="px-4 py-3 text-right text-gray-500">
                           {item.pricePerKg != null ? `¥${item.pricePerKg}/kg` : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
