@@ -10,8 +10,8 @@ const CATEGORY_CONFIG = {
 const CATEGORIES = ['粗飼料', '濃厚飼料', '添加剤'] as const
 
 function StockCell({ item }: { item: InventoryItem }) {
-  const isAlert = item.stock <= item.alertThreshold
-  const isWarning = !isAlert && item.stock <= item.alertThreshold * 1.5
+  const isAlert = item.stock < item.alertThreshold
+  const isWarning = !isAlert && item.stock < item.alertThreshold * 1.5
 
   if (isAlert) return (
     <span className="inline-flex items-center gap-1.5 font-bold text-red-600">
@@ -29,7 +29,7 @@ function StockCell({ item }: { item: InventoryItem }) {
 
 export default async function InventoryPage() {
   const inventory = await getInventory()
-  const alertCount = inventory.filter((i) => i.stock <= i.alertThreshold).length
+  const alertCount = inventory.filter((i) => i.stock < i.alertThreshold).length
   const lastUpdated = inventory.map((i) => i.updatedAt).filter(Boolean).sort().at(-1)
 
   return (
@@ -57,7 +57,7 @@ export default async function InventoryPage() {
         const items = inventory.filter((i) => i.category === category)
         if (items.length === 0) return null
         const cfg = CATEGORY_CONFIG[category]
-        const catAlerts = items.filter((i) => i.stock <= i.alertThreshold).length
+        const catAlerts = items.filter((i) => i.stock < i.alertThreshold).length
 
         return (
           <section key={category}>
@@ -77,13 +77,12 @@ export default async function InventoryPage() {
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left px-5 py-3 font-semibold text-gray-500">商品名</th>
                     <th className="text-right px-5 py-3 font-semibold text-gray-500">在庫数</th>
-                    <th className="text-right px-5 py-3 font-semibold text-gray-500">単価</th>
                     <th className="text-right px-5 py-3 font-semibold text-gray-500 hidden sm:table-cell">アラート基準</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => {
-                    const isAlert = item.stock <= item.alertThreshold
+                    const isAlert = item.stock < item.alertThreshold
                     return (
                       <tr
                         key={item.id}
@@ -99,11 +98,6 @@ export default async function InventoryPage() {
                         </td>
                         <td className="px-5 py-3 text-right">
                           <StockCell item={item} />
-                        </td>
-                        <td className="px-5 py-3 text-right font-semibold text-gray-700">
-                          {item.pricePerKg != null
-                            ? <span>¥<span className="text-base">{item.pricePerKg.toLocaleString()}</span><span className="text-xs text-gray-400">/kg</span></span>
-                            : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-5 py-3 text-right text-gray-400 text-xs hidden sm:table-cell">
                           {item.alertThreshold} {item.unit}

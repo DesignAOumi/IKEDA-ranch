@@ -83,14 +83,13 @@ export default function AdminInventoryPage() {
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left px-4 py-3 font-semibold text-gray-500">商品名</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-500">現在の在庫</th>
-                    <th className="text-right px-4 py-3 font-semibold text-gray-500 hidden sm:table-cell">単価</th>
                     <th className="px-4 py-3 text-right font-semibold text-gray-500">入荷</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => {
                     const isAdding = addingId === item.id
-                    const isAlert = item.stock <= item.alertThreshold
+                    const isAlert = item.stock < item.alertThreshold
                     return (
                       <tr key={item.id} className={`border-b border-gray-50 last:border-0 ${isAlert ? 'bg-red-50' : ''}`}>
                         <td className="px-4 py-3 font-medium text-gray-800">
@@ -101,9 +100,6 @@ export default function AdminInventoryPage() {
                           <span className={`font-bold ${isAlert ? 'text-red-600' : 'text-emerald-600'}`}>
                             {item.stock} {item.unit}
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-500 hidden sm:table-cell">
-                          {item.pricePerKg != null ? `¥${item.pricePerKg}/kg` : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {isAdding ? (
