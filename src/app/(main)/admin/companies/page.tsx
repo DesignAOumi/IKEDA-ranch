@@ -7,10 +7,13 @@ export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<Omit<Company, 'passwordHash'>[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', password: '' })
+  const [form, setForm] = useState({ name: '', password: '', email: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editEmail, setEditEmail] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
 
   useEffect(() => {
     fetch('/api/companies')
@@ -31,12 +34,31 @@ export default function AdminCompaniesPage() {
     const data = await res.json()
     setSubmitting(false)
     if (res.ok) {
-      setForm({ name: '', password: '' })
+      setForm({ name: '', password: '', email: '' })
       setShowForm(false)
       const updated = await fetch('/api/companies').then((r) => r.json())
       setCompanies(updated)
     } else {
       setError(data.error ?? '追加に失敗しました')
+    }
+  }
+
+  function startEditEmail(c: Omit<Company, 'passwordHash'>) {
+    setEditingId(c.id)
+    setEditEmail(c.email ?? '')
+  }
+
+  async function saveEmail(id: string) {
+    setSavingEmail(true)
+    const res = await fetch(`/api/companies/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: editEmail }),
+    })
+    setSavingEmail(false)
+    if (res.ok) {
+      setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, email: editEmail } : c)))
+      setEditingId(null)
     }
   }
 
@@ -88,6 +110,18 @@ export default function AdminCompaniesPage() {
                 required
               />
             </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                通知メールアドレス <span className="text-gray-400 font-normal">（在庫アラートの送信先）</span>
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="例: order@example.co.jp"
+              />
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-3">
@@ -117,6 +151,7 @@ export default function AdminCompaniesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-4 py-3 font-medium text-gray-600">会社名</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">通知メール</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">作成日</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">最終ログイン</th>
                 <th className="px-4 py-3" />
@@ -126,6 +161,41 @@ export default function AdminCompaniesPage() {
               {companies.map((c) => (
                 <tr key={c.id} className="border-b border-gray-50 last:border-0">
                   <td className="px-4 py-3 font-medium">{c.name}</td>
+                  <td className="px-4 py-3">
+                    {editingId === c.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && saveEmail(c.id)}
+                          className="w-48 border-2 border-green-400 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-green-500"
+                          placeholder="order@example.co.jp"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveEmail(c.id)}
+                          disabled={savingEmail}
+                          className="text-xs bg-green-700 text-white px-2.5 py-1 rounded-md disabled:opacity-50"
+                        >
+                          {savingEmail ? '...' : '保存'}
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditEmail(c)}
+                        className={`text-sm hover:underline ${c.email ? 'text-gray-700' : 'text-gray-400'}`}
+                      >
+                        {c.email || '＋ 設定する'}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">
                     {c.createdAt ? new Date(c.createdAt).toLocaleDateString('ja-JP') : '—'}
                   </td>

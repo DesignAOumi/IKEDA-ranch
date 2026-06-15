@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getInventory, addAlertHistory, getTodayAlertHistory } from '@/lib/sheets'
+import { getInventory, getCompanies, addAlertHistory, getTodayAlertHistory } from '@/lib/sheets'
 import { sendLineBroadcast } from '@/lib/line'
+import { sendOrderRequestEmail } from '@/lib/email'
 import { randomUUID } from 'crypto'
 
 export async function POST(request: Request) {
@@ -10,7 +11,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [inventory, todayAlerts] = await Promise.all([getInventory(), getTodayAlertHistory()])
+    const [inventory, companies, todayAlerts] = await Promise.all([
+      getInventory(),
+      getCompanies(),
+      getTodayAlertHistory(),
+    ])
     const alreadyAlerted = new Set(todayAlerts.map((a) => a.productName))
 
     const alertItems = inventory.filter(
@@ -29,6 +34,23 @@ export async function POST(request: Request) {
     ].join('\n')
 
     await sendLineBroadcast(message)
+
+    // 担当会社ごとに対象品目をまとめて発注依頼メールを送信
+    const companyById = new Map(companies.map((c) => [c.id, c]))
+    const itemsByCompany = new Map<string, typeof alertItems>()
+    for (const item of alertItems) {
+      if (!item.companyId) continue
+      const list = itemsByCompany.get(item.companyId) ?? []
+      list.push(item)
+      itemsByCompany.set(item.companyId, list)
+    }
+    await Promise.all(
+      [...itemsByCompany.entries()].map(([companyId, items]) => {
+        const company = companyById.get(companyId)
+        if (!company?.email) return Promise.resolve()
+        return sendOrderRequestEmail(company.name, company.email, items)
+      })
+    )
 
     const now = new Date().toISOString()
     await Promise.all(

@@ -10,6 +10,7 @@ export interface InventoryItem {
   minLot: number
   minLotPrice: number | null
   alertThreshold: number
+  companyId: string
   updatedAt: string
   updatedBy: string
 }
@@ -18,6 +19,7 @@ export interface Company {
   id: string
   name: string
   passwordHash: string
+  email: string
   createdAt: string
   lastLogin: string
 }

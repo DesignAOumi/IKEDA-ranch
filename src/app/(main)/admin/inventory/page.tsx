@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { InventoryItem } from '@/lib/types'
+import type { InventoryItem, Company } from '@/lib/types'
 
 const CATEGORIES = ['粗飼料', '濃厚飼料', '添加剤'] as const
 
 export default function AdminInventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [companies, setCompanies] = useState<Omit<Company, 'passwordHash'>[]>([])
   const [loading, setLoading] = useState(true)
   const [addingId, setAddingId] = useState<string | null>(null)
   const [addAmount, setAddAmount] = useState('')
@@ -14,11 +15,28 @@ export default function AdminInventoryPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    fetch('/api/inventory')
-      .then((r) => r.json())
-      .then(setInventory)
+    Promise.all([
+      fetch('/api/inventory').then((r) => r.json()),
+      fetch('/api/companies').then((r) => r.json()),
+    ])
+      .then(([inv, comps]) => {
+        setInventory(inv)
+        setCompanies(Array.isArray(comps) ? comps : [])
+      })
       .finally(() => setLoading(false))
   }, [])
+
+  async function saveCompany(item: InventoryItem, companyId: string) {
+    setInventory((prev) => prev.map((i) => (i.id === item.id ? { ...i, companyId } : i)))
+    const res = await fetch(`/api/inventory/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId }),
+    })
+    if (!res.ok) {
+      setMessage('⚠ 担当会社の更新に失敗しました')
+    }
+  }
 
   function startAdd(item: InventoryItem) {
     setAddingId(item.id)
@@ -83,6 +101,7 @@ export default function AdminInventoryPage() {
                   <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <th className="text-left px-4 py-3 font-semibold text-gray-500">商品名</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-500">現在の在庫</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-500">担当会社</th>
                     <th className="px-4 py-3 text-right font-semibold text-gray-500">入荷</th>
                   </tr>
                 </thead>
@@ -100,6 +119,20 @@ export default function AdminInventoryPage() {
                           <span className={`font-bold ${isAlert ? 'text-red-600' : 'text-emerald-600'}`}>
                             {item.stock} {item.unit}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={item.companyId}
+                            onChange={(e) => saveCompany(item, e.target.value)}
+                            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 max-w-[10rem]"
+                          >
+                            <option value="">未設定</option>
+                            {companies.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-4 py-3 text-right">
                           {isAdding ? (

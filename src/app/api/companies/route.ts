@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await requireAdmin()
-    const { name, password } = await request.json()
+    const { name, password, email } = await request.json()
 
     if (!name || !password) {
       return NextResponse.json({ error: '会社名とパスワードは必須です' }, { status: 400 })
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       id: randomUUID(),
       name,
       passwordHash,
+      email: email ?? '',
       createdAt: new Date().toISOString(),
     })
 

@@ -13,7 +13,7 @@ const ID = process.env.SPREADSHEET_ID!
 // ── 在庫 ──────────────────────────────────────────────
 
 export async function getInventory(): Promise<InventoryItem[]> {
-  const rows = await sheetsGet(ID, `${SHEET.INVENTORY}!A2:K`)
+  const rows = await sheetsGet(ID, `${SHEET.INVENTORY}!A2:L`)
   return rows.map((r) => ({
     id: r[0] ?? '',
     category: (r[1] ?? '') as InventoryItem['category'],
@@ -26,11 +26,12 @@ export async function getInventory(): Promise<InventoryItem[]> {
     alertThreshold: Number(r[8]) || 5,
     updatedAt: r[9] ?? '',
     updatedBy: r[10] ?? '',
+    companyId: r[11] ?? '',
   }))
 }
 
 export async function addInventoryItem(
-  data: Pick<InventoryItem, 'category' | 'name' | 'stock' | 'unit' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>,
+  data: Pick<InventoryItem, 'category' | 'name' | 'stock' | 'unit' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'> & Partial<Pick<InventoryItem, 'companyId'>>,
   updatedBy: string
 ): Promise<void> {
   const items = await getInventory()
@@ -41,7 +42,7 @@ export async function addInventoryItem(
   const newId = `inv_${String(maxNum + 1).padStart(3, '0')}`
   const now = new Date().toISOString()
 
-  await sheetsAppend(ID, `${SHEET.INVENTORY}!A:K`, [[
+  await sheetsAppend(ID, `${SHEET.INVENTORY}!A:L`, [[
     newId,
     data.category,
     data.name,
@@ -53,12 +54,13 @@ export async function addInventoryItem(
     data.alertThreshold,
     now,
     updatedBy,
+    data.companyId ?? '',
   ]])
 }
 
 export async function updateInventoryItem(
   id: string,
-  data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>>,
+  data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold' | 'companyId'>>,
   updatedBy: string
 ): Promise<void> {
   const items = await getInventory()
@@ -69,7 +71,7 @@ export async function updateInventoryItem(
   const item = items[idx]
   const now = new Date().toISOString()
 
-  await sheetsUpdate(ID, `${SHEET.INVENTORY}!A${row}:K${row}`, [[
+  await sheetsUpdate(ID, `${SHEET.INVENTORY}!A${row}:L${row}`, [[
     item.id,
     item.category,
     item.name,
@@ -81,26 +83,35 @@ export async function updateInventoryItem(
     data.alertThreshold ?? item.alertThreshold,
     now,
     updatedBy,
+    data.companyId !== undefined ? data.companyId : item.companyId,
   ]])
 }
 
 // ── 飼料会社アカウント ──────────────────────────────────
 
 export async function getCompanies(): Promise<Company[]> {
-  const rows = await sheetsGet(ID, `${SHEET.COMPANIES}!A2:E`)
+  const rows = await sheetsGet(ID, `${SHEET.COMPANIES}!A2:F`)
   return rows.map((r) => ({
     id: r[0] ?? '',
     name: r[1] ?? '',
     passwordHash: r[2] ?? '',
     createdAt: r[3] ?? '',
     lastLogin: r[4] ?? '',
+    email: r[5] ?? '',
   }))
 }
 
 export async function addCompany(company: Omit<Company, 'lastLogin'>): Promise<void> {
-  await sheetsAppend(ID, `${SHEET.COMPANIES}!A:E`, [
-    [company.id, company.name, company.passwordHash, company.createdAt, '']
+  await sheetsAppend(ID, `${SHEET.COMPANIES}!A:F`, [
+    [company.id, company.name, company.passwordHash, company.createdAt, '', company.email ?? '']
   ])
+}
+
+export async function updateCompanyEmail(id: string, email: string): Promise<void> {
+  const companies = await getCompanies()
+  const idx = companies.findIndex((c) => c.id === id)
+  if (idx === -1) throw new Error('Company not found')
+  await sheetsUpdate(ID, `${SHEET.COMPANIES}!F${idx + 2}`, [[email]])
 }
 
 export async function updateCompanyLastLogin(id: string): Promise<void> {
@@ -114,7 +125,7 @@ export async function deleteCompany(id: string): Promise<void> {
   const companies = await getCompanies()
   const idx = companies.findIndex((c) => c.id === id)
   if (idx === -1) return
-  await sheetsClear(ID, `${SHEET.COMPANIES}!A${idx + 2}:E${idx + 2}`)
+  await sheetsClear(ID, `${SHEET.COMPANIES}!A${idx + 2}:F${idx + 2}`)
 }
 
 // ── アラート履歴 ────────────────────────────────────────
