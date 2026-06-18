@@ -96,31 +96,31 @@ export default function AdminInventoryPage() {
           <section key={category}>
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{category}</h2>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500">商品名</th>
-                    <th className="text-right px-4 py-3 font-semibold text-gray-500">現在の在庫</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500">担当会社</th>
-                    <th className="px-4 py-3 text-right font-semibold text-gray-500">入荷</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <table className="block w-full text-sm">
+                <tbody className="block divide-y divide-gray-100">
                   {items.map((item) => {
                     const isAdding = addingId === item.id
                     const isAlert = item.stock < item.alertThreshold
                     return (
-                      <tr key={item.id} className={`border-b border-gray-50 last:border-0 ${isAlert ? 'bg-red-50' : ''}`}>
-                        <td className="px-4 py-3 font-medium text-gray-800">
+                      <tr
+                        key={item.id}
+                        className={`flex flex-col gap-2.5 px-4 py-4 ${isAlert ? 'bg-red-50' : ''}`}
+                      >
+                        {/* 商品名 */}
+                        <td className="block text-base font-semibold text-gray-800">
                           {isAlert && <span className="mr-1.5">⚠️</span>}
                           {item.name}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        {/* 現在の在庫 */}
+                        <td className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium text-gray-400">現在の在庫</span>
                           <span className={`font-bold ${isAlert ? 'text-red-600' : 'text-emerald-600'}`}>
                             {item.stock} {item.unit}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        {/* 担当会社 */}
+                        <td className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium text-gray-400">担当会社</span>
                           <select
                             value={item.companyId}
                             onChange={(e) => saveCompany(item, e.target.value)}
@@ -134,22 +134,21 @@ export default function AdminInventoryPage() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        {/* 入荷 */}
+                        <td className="block pt-1">
                           {isAdding ? (
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="number"
-                                  value={addAmount}
-                                  onChange={(e) => setAddAmount(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && saveAdd(item)}
-                                  className="w-20 border-2 border-green-400 rounded-lg px-2 py-1.5 text-right text-sm focus:outline-none focus:border-green-500"
-                                  placeholder="0"
-                                  min="1"
-                                  autoFocus
-                                />
-                                <span className="text-xs text-gray-500 whitespace-nowrap">{item.unit}</span>
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={addAmount}
+                                onChange={(e) => setAddAmount(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && saveAdd(item)}
+                                className="w-20 border-2 border-green-400 rounded-lg px-2 py-1.5 text-right text-sm focus:outline-none focus:border-green-500"
+                                placeholder="0"
+                                min="1"
+                                autoFocus
+                              />
+                              <span className="text-xs text-gray-500 whitespace-nowrap">{item.unit}</span>
                               <button
                                 onClick={() => saveAdd(item)}
                                 disabled={saving}
@@ -159,7 +158,7 @@ export default function AdminInventoryPage() {
                               </button>
                               <button
                                 onClick={cancelAdd}
-                                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5"
+                                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 ml-auto"
                               >
                                 ✕
                               </button>
@@ -167,7 +166,7 @@ export default function AdminInventoryPage() {
                           ) : (
                             <button
                               onClick={() => startAdd(item)}
-                              className="text-xs bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-400 px-3 py-1.5 rounded-lg transition-colors font-bold whitespace-nowrap"
+                              className="w-full text-xs bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-400 px-3 py-2 rounded-lg transition-colors font-bold"
                             >
                               ＋ 在庫を追加
                             </button>
