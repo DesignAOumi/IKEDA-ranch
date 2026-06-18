@@ -147,7 +147,7 @@ export default function ReduceInventoryPage() {
                               disabled={item.stock === 0}
                               className="w-full text-xs bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 hover:border-red-400 px-3 py-2 rounded-lg transition-colors font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                              −
+                              － 在庫を減らす
                             </button>
                           )}
                         </td>
