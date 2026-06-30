@@ -10,7 +10,8 @@ export interface InventoryItem {
   minLot: number
   minLotPrice: number | null
   alertThreshold: number
-  companyId: string
+  /** 担当会社（スプレッドシートで設定。会社名を保持。旧データのID も許容） */
+  company: string
   updatedAt: string
   updatedBy: string
 }

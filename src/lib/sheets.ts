@@ -26,12 +26,21 @@ export async function getInventory(): Promise<InventoryItem[]> {
     alertThreshold: Number(r[8]) || 5,
     updatedAt: r[9] ?? '',
     updatedBy: r[10] ?? '',
-    companyId: r[11] ?? '',
+    company: r[11] ?? '',
   }))
 }
 
+/**
+ * 在庫の「担当会社」セルの値（会社名）から飼料会社アカウントを引く。
+ * 会社名で照合し、見つからなければ旧データの会社ID でも照合する（後方互換）。
+ */
+export function resolveCompany(value: string, companies: Company[]): Company | undefined {
+  if (!value) return undefined
+  return companies.find((c) => c.name === value) ?? companies.find((c) => c.id === value)
+}
+
 export async function addInventoryItem(
-  data: Pick<InventoryItem, 'category' | 'name' | 'stock' | 'unit' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'> & Partial<Pick<InventoryItem, 'companyId'>>,
+  data: Pick<InventoryItem, 'category' | 'name' | 'stock' | 'unit' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>,
   updatedBy: string
 ): Promise<void> {
   const items = await getInventory()
@@ -54,13 +63,13 @@ export async function addInventoryItem(
     data.alertThreshold,
     now,
     updatedBy,
-    data.companyId ?? '',
+    '', // 担当会社はスプレッドシートで設定する
   ]])
 }
 
 export async function updateInventoryItem(
   id: string,
-  data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold' | 'companyId'>>,
+  data: Partial<Pick<InventoryItem, 'stock' | 'pricePerKg' | 'minLot' | 'minLotPrice' | 'alertThreshold'>>,
   updatedBy: string
 ): Promise<void> {
   const items = await getInventory()
@@ -83,7 +92,7 @@ export async function updateInventoryItem(
     data.alertThreshold ?? item.alertThreshold,
     now,
     updatedBy,
-    data.companyId !== undefined ? data.companyId : item.companyId,
+    item.company, // 担当会社はスプレッドシートで設定するため既存値を保持
   ]])
 }
 

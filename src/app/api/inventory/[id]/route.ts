@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getInventory, getCompanies, updateInventoryItem, addAlertHistory, getTodayAlertHistory } from '@/lib/sheets'
+import { getInventory, getCompanies, updateInventoryItem, addAlertHistory, getTodayAlertHistory, resolveCompany } from '@/lib/sheets'
 import { requireAdmin } from '@/lib/auth'
 import { sendLineBroadcast } from '@/lib/line'
 import { sendOrderRequestEmail } from '@/lib/email'
@@ -23,7 +23,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       minLot: body.minLot !== undefined ? Number(body.minLot) : undefined,
       minLotPrice: body.minLotPrice !== undefined ? (body.minLotPrice === '' ? null : Number(body.minLotPrice)) : undefined,
       alertThreshold: body.alertThreshold !== undefined ? Number(body.alertThreshold) : undefined,
-      companyId: body.companyId !== undefined ? String(body.companyId) : undefined,
     }, session.name)
 
     if (body.stock !== undefined) {
@@ -46,8 +45,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           await sendLineBroadcast(
             `【在庫アラート】\n⚠️ ${currentItem.name}: ${newStock}${currentItem.unit}\n基準値：${newThreshold}${currentItem.unit}`
           )
-          if (currentItem.companyId) {
-            const company = (await getCompanies()).find((c) => c.id === currentItem.companyId)
+          if (currentItem.company) {
+            const company = resolveCompany(currentItem.company, await getCompanies())
             if (company?.email) {
               await sendOrderRequestEmail(company.name, company.email, [
                 { ...currentItem, stock: newStock, alertThreshold: newThreshold },

@@ -26,16 +26,11 @@ export default function AdminInventoryPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function saveCompany(item: InventoryItem, companyId: string) {
-    setInventory((prev) => prev.map((i) => (i.id === item.id ? { ...i, companyId } : i)))
-    const res = await fetch(`/api/inventory/${item.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ companyId }),
-    })
-    if (!res.ok) {
-      setMessage('⚠ 担当会社の更新に失敗しました')
-    }
+  // 担当会社（スプレッドシートで設定）の表示名を解決する。
+  // セルに会社名が入っていればそのまま、旧データの会社ID が入っていれば会社名へ変換する。
+  function companyLabel(item: InventoryItem): string {
+    if (!item.company) return ''
+    return companies.find((c) => c.id === item.company)?.name ?? item.company
   }
 
   function startAdd(item: InventoryItem) {
@@ -118,21 +113,14 @@ export default function AdminInventoryPage() {
                             {item.stock} {item.unit}
                           </span>
                         </td>
-                        {/* 担当会社 */}
+                        {/* 担当会社（スプレッドシートで設定・読み取り専用） */}
                         <td className="flex items-center justify-between gap-3">
                           <span className="text-xs font-medium text-gray-400">担当会社</span>
-                          <select
-                            value={item.companyId}
-                            onChange={(e) => saveCompany(item, e.target.value)}
-                            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 max-w-[10rem]"
-                          >
-                            <option value="">未設定</option>
-                            {companies.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
+                          {companyLabel(item) ? (
+                            <span className="text-sm text-gray-700">{companyLabel(item)}</span>
+                          ) : (
+                            <span className="text-sm text-gray-300">未設定</span>
+                          )}
                         </td>
                         {/* 入荷 */}
                         <td className="block pt-1">
